@@ -1,1 +1,1 @@
-# primary_cv_cource
+# primary_cv_course
