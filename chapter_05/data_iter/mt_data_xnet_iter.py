@@ -90,7 +90,7 @@ def img_agu(img):
 
 class LoadImagesAndLabels(Dataset):  # for training/testing
     def __init__(self, pattern,path_img,path_anno,batch_size,flag_debug = False):
-
+        
         if pattern == 'P-Net':
             img_size=12
             img_min_size = 24

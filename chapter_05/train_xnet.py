@@ -141,8 +141,9 @@ def trainer(ops):
                 torch.save(m_XNet.state_dict(), ops.ckpt + '{}_epoch-{}.pth'.format(ops.pattern,epoch))
 
 if __name__ == "__main__":
-    
-    multiprocessing.set_start_method('spawn')
+
+    # 当提示 GPU 不支持多进程，建议 ’spawn’，开启以下语句
+    # multiprocessing.set_start_method('spawn')
 
     parser = argparse.ArgumentParser(description=' Project X-Net Train')
     parser.add_argument('--seed', type=int, default = 66,
@@ -159,13 +160,13 @@ if __name__ == "__main__":
         help = 'num_workers')
     parser.add_argument('--epochs', type=int, default = 1000,
         help = 'epochs')
-    parser.add_argument('--ft_model', type=str, default = './ckpt/O-Net_latest.pth',#./ckpt/R-Net_latest.pth
+    parser.add_argument('--ft_model', type=str, default = './ckpt/P-Net_latest.pth',#./ckpt/R-Net_latest.pth
         help = 'ft_model')
     parser.add_argument('--ckpt', type=str, default = './ckpt/',
         help = 'ckpt')
     parser.add_argument('--Optimizer_X', type=str, default = 'Adam',
         help = 'Optimizer_X：Adam,SGD,RMSprop')
-    parser.add_argument('--pattern', type=str, default = 'O-Net',
+    parser.add_argument('--pattern', type=str, default = 'P-Net',
         help = 'pattern：P-Net,R-Net,O-Net')
 
     #--------------------------------------------------------------------------
