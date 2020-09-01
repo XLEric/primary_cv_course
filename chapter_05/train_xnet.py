@@ -12,6 +12,8 @@ import datetime
 import torch.nn as nn
 from torch.autograd import Variable
 import argparse
+import multiprocessing
+multiprocessing.set_start_method('spawn')
 
 def mkdir_(path, flag_rm=False):
     if os.path.exists(path):
@@ -28,6 +30,14 @@ def trainer(ops):
 
     use_cuda = torch.cuda.is_available()
     device = torch.device('cuda:0' if use_cuda else 'cpu')
+
+    if ops.pattern == 'P-Net':
+        m_XNet = PNet()
+        mtcnn_detector = None
+    elif ops.pattern == 'R-Net':
+        m_XNet = RNet()
+    elif ops.pattern == 'O-Net':
+        m_XNet = ONet()
     # datasets
     dataset = LoadImagesAndLabels(pattern = ops.pattern,path_img = ops.path_img,path_anno = ops.path_anno,batch_size = ops.batch_size)
     print('dataset len : ',dataset.__len__())
@@ -37,13 +47,6 @@ def trainer(ops):
                             shuffle=True,
                             pin_memory=False,
                             drop_last = True)
-
-    if ops.pattern == 'P-Net':
-        m_XNet = PNet()
-    elif ops.pattern == 'R-Net':
-        m_XNet = RNet()
-    elif ops.pattern == 'O-Net':
-        m_XNet = ONet()
 
     print('{} : \n'.format(ops.pattern),m_XNet)
     m_XNet = m_XNet.to(device)
@@ -72,6 +75,8 @@ def trainer(ops):
     loss_cls_mean = 0.
     loss_idx = 0.
     init_lr = ops.init_lr
+
+
 
     for epoch in range(0, ops.epochs):
 
@@ -148,17 +153,17 @@ if __name__ == "__main__":
         help = 'batch_size')
     parser.add_argument('--init_lr', type=float, default = 1e-3,
         help = 'init_lr')
-    parser.add_argument('--num_workers', type=int, default = 16,
+    parser.add_argument('--num_workers', type=int, default = 4,
         help = 'num_workers')
     parser.add_argument('--epochs', type=int, default = 1000,
         help = 'epochs')
-    parser.add_argument('--ft_model', type=str, default = './ckpt/R-Net_latest.pth',#./ckpt/R-Net_latest.pth
+    parser.add_argument('--ft_model', type=str, default = './ckpt/O-Net_latest.pth',#./ckpt/R-Net_latest.pth
         help = 'ft_model')
     parser.add_argument('--ckpt', type=str, default = './ckpt/',
         help = 'ckpt')
     parser.add_argument('--Optimizer_X', type=str, default = 'Adam',
         help = 'Optimizer_X：Adam,SGD,RMSprop')
-    parser.add_argument('--pattern', type=str, default = 'R-Net',
+    parser.add_argument('--pattern', type=str, default = 'O-Net',
         help = 'pattern：P-Net,R-Net,O-Net')
 
     #--------------------------------------------------------------------------
