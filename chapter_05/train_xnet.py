@@ -13,7 +13,6 @@ import torch.nn as nn
 from torch.autograd import Variable
 import argparse
 import multiprocessing
-multiprocessing.set_start_method('spawn')
 
 def mkdir_(path, flag_rm=False):
     if os.path.exists(path):
@@ -142,6 +141,9 @@ def trainer(ops):
                 torch.save(m_XNet.state_dict(), ops.ckpt + '{}_epoch-{}.pth'.format(ops.pattern,epoch))
 
 if __name__ == "__main__":
+    
+    multiprocessing.set_start_method('spawn')
+
     parser = argparse.ArgumentParser(description=' Project X-Net Train')
     parser.add_argument('--seed', type=int, default = 66,
         help = 'seed') # 设置随机种子
