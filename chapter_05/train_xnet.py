@@ -75,6 +75,7 @@ def trainer(ops):
     loss_idx = 0.
     init_lr = ops.init_lr
 
+    loss_cnt = 0
 
 
     for epoch in range(0, ops.epochs):
@@ -82,9 +83,14 @@ def trainer(ops):
         if loss_idx!=0:
             if best_loss > (loss_mean/loss_idx):
                 best_loss = loss_mean/loss_idx
+                loss_cnt = 0
             else:
-                init_lr = init_lr*0.1
-                set_learning_rate(optimizer, init_lr)
+                if loss_cnt>3:
+                    init_lr = init_lr*0.1
+                    set_learning_rate(optimizer, init_lr)
+                    loss_cnt = 0
+                else:
+                    loss_cnt += 1
 
         loss_mean = 0.
         loss_cls_mean = 0.
