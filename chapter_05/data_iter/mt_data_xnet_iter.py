@@ -4,6 +4,7 @@
 # Author: X.L.Eric
 # function: data iter
 import sys
+sys.path.append('./')
 import numpy as np
 import cv2
 import os
@@ -13,6 +14,9 @@ import random
 import torch
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+from core.train_model import pmm_det,rmm_det
+from core.utils import convert_to_square,IoU
+#-------------------------------------------------------
 
 def set_learning_rate(optimizer, lr):
     for param_group in optimizer.param_groups:
@@ -82,12 +86,15 @@ def img_agu(img):
         # print('------------->>> hsv')
     return img
 
+#-------------------------------------------------------------------------------
+
 class LoadImagesAndLabels(Dataset):  # for training/testing
     def __init__(self, pattern,path_img,path_anno,batch_size,flag_debug = False):
 
         if pattern == 'P-Net':
             img_size=12
             img_min_size = 24
+            self.mm_det  = None
         elif pattern == 'R-Net':
             img_size=24
             img_min_size = 36
@@ -112,20 +119,46 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         self.pics_num = num
         self.annotations = annotations
         self.flag_debug = flag_debug
-        # random.shuffle (self.datas_index_list)
         random.shuffle (self.annotations)
-
     def __len__(self):
         return (len(self.annotations)-2048)
 
     def __getitem__(self, index):
-        imgs_list = []
-        offsets_list = []
-        labels_list  = []
 
         if self.flag_debug : print("{}~{}".format(index,min(self.pics_num,index+self.batch_size)))
         #--------------------------
         batch_idx_list = list(range(index,min(self.pics_num,index+self.batch_size)))
+        #--------------------------
+
+        if self.pattern == 'O-Net':
+            with torch.no_grad():
+                imgs_list,offsets_list,labels_list,pos_num_sum,part_num_sum,neg_num_sum = self.gen_ro_data(batch_idx_list,pmm_det,self.pattern,self.img_size)
+        elif self.pattern == 'R-Net':
+            with torch.no_grad():
+                imgs_list,offsets_list,labels_list,pos_num_sum,part_num_sum,neg_num_sum = self.gen_ro_data(batch_idx_list,rmm_det,self.pattern,self.img_size)
+        elif self.pattern == 'P-Net':
+            imgs_list,offsets_list,labels_list,pos_num_sum,part_num_sum,neg_num_sum = self.gen_p_data(batch_idx_list)
+
+
+        #--------------------------
+        if self.flag_debug : print('imgs_list len {} , offsets_list len {} , labels_list len {} '.format(len(imgs_list),len(offsets_list),len(labels_list)))
+        imgs_list = np.array(imgs_list)
+        imgs = imgs_list.astype(np.float32)
+
+        offsets_list = np.array(offsets_list)
+        gt_offsets = offsets_list.astype(np.float32)
+
+        labels_list = np.array(labels_list)
+        gt_labels = labels_list.astype(np.float32)
+
+        if self.flag_debug : print('imgs_list shape {} , gt_offsets shape {} , gt_labels shape {} '.format(imgs.shape,gt_offsets.shape,gt_labels.shape))
+
+        return imgs,gt_labels,gt_offsets,pos_num_sum,part_num_sum,neg_num_sum
+
+    def gen_ro_data(self,batch_idx_list,mm_det,pattern,image_size,vis = False):
+        imgs_list = []
+        offsets_list = []
+        labels_list  = []
 
         random.shuffle(batch_idx_list)
         batch_idx_list_pos = batch_idx_list[0:max(1,int(len(batch_idx_list)*2/9))]
@@ -135,7 +168,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
         random.shuffle(batch_idx_list)
         batch_idx_list_neg = batch_idx_list[0:max(1,int(len(batch_idx_list)*4/9))]
-        #--------------------------
+
         pos_num_sum = 0
         part_num_sum = 0
         neg_num_sum = 0
@@ -143,10 +176,173 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         pos_num_sum_thr = 100 + random.randint(-20,20)
         part_num_sum_thr = 200 + random.randint(-30,30)
         neg_num_sum_thr = 300 + random.randint(-50,50)
+        #---------------------------------------------
+        random.shuffle(batch_idx_list)
+        for kk in range(len(batch_idx_list)):
+
+            jj = batch_idx_list[kk]
+        #---------------------------------------------
+            if (pos_num_sum>= pos_num_sum_thr) and (part_num_sum>= part_num_sum_thr) and (neg_num_sum>= neg_num_sum_thr):
+                break
+
+            if not((jj in batch_idx_list_pos) or (jj in batch_idx_list_part) or (jj in batch_idx_list_neg)):
+                continue
+            annotation = self.annotations[jj].strip().split(' ')
+            #image path
+            im_path = annotation[0]
+
+            gts = list(map(float, annotation[1:]))
+            #gt
+            gts = np.array(gts, dtype=np.float32).reshape(-1, 4)
+            if self.flag_debug:
+                print('   {} {} '.format(jj,im_path))
+
+            #load image
+            read_img_path = os.path.join(self.path_img, im_path + '.jpg')
+
+            img = cv2.imread(read_img_path)
+            all_boxes = list()
+            if pattern == 'R-Net':
+                _, boxes_align = mm_det.detect_pnet(img)
+            elif pattern == 'O-Net':
+                boxes_align,_ = mm_det.detect_face(img)
+            if boxes_align is None:
+                continue
+            dets = convert_to_square(boxes_align)
+            dets[:, 0:4] = np.round(dets[:, 0:4])
+
+            gts = np.array(gts, dtype=np.float32).reshape(-1, 4)
+
+            if vis == True:
+                for i in range(len(boxes_align)):
+                    box = boxes_align[i]
+                    x_min = int(box[0])
+                    y_min = int(box[1])
+                    x_max = int(box[2])
+                    y_max = int(box[3])
+                    cv2.rectangle(img, (x_min,y_min), (x_max,y_max), (0,255,225), 2)
+                cv2.namedWindow('im',0)
+                cv2.imshow('im',img)
+                cv2.waitKey(1)
+            #-------------------------------------------------------------------
+
+            for box in dets:
+                x_left, y_top, x_right, y_bottom, _ = box.astype(int)
+                width = x_right - x_left + 1
+                height = y_bottom - y_top + 1
+
+                # ignore box that is too small or beyond image border
+                if width < 20 or x_left < 0 or y_top < 0 or x_right > img.shape[1] - 1 or y_bottom > img.shape[0] - 1:
+                    continue
+
+                # compute intersection over union(IoU) between current box and all gt boxes
+                Iou = IoU(box, gts)
+                cropped_im = img[y_top:y_bottom + 1, x_left:x_right + 1, :]
+
+                # save negative images and write label
+                # Iou with all gts must below 0.3
+                if np.max(Iou) < 0.3 and ((neg_num_sum < pos_num_sum*4) or (neg_num_sum<neg_num_sum_thr))and (jj in batch_idx_list_neg):
+                    # save the examples
+                    # save_file = os.path.join(neg_save_dir, "%s.jpg" % n_idx)
+                    # # print(save_file)
+                    # f2.write("Rnet_24/negative/%s.jpg" % n_idx + ' 0\n')
+                    # cv2.imwrite(save_file, resized_im)
+                    # n_idx += 1
+                    resized_im = cv2.resize(cropped_im, (image_size, image_size),interpolation=random.randint(0,4))
+                    resized_im = img_agu(resized_im)
+
+                    if random.random()>0.5:#水平翻转
+                        img_ = cv2.flip(resized_im,1)
+
+                    img_ = resized_im.transpose(2, 0, 1)
+                    #--------------
+                    imgs_list.append(img_)
+                    offsets_list.append((0,0,0,0))
+                    labels_list.append(0.0)
+                    neg_num_sum += 1
+                else:
+                    # find gt_box with the highest iou
+                    idx = np.argmax(Iou)
+                    assigned_gt = gts[idx]
+                    x1, y1, x2, y2 = assigned_gt
+
+                    # compute bbox reg label
+                    offset_x1 = (x1 - x_left) / float(width)
+                    offset_y1 = (y1 - y_top) / float(height)
+                    offset_x2 = (x2 - x_right) / float(width)
+                    offset_y2 = (y2 - y_bottom) / float(height)
+
+                    # save positive and part-face images and write labels
+                    if np.max(Iou) >= 0.65 and (jj in batch_idx_list_pos):
+                        # save_file = os.path.join(pos_save_dir, "%s.jpg" % p_idx)
+                        # f1.write("Rnet_24/positive/%s.jpg"%p_idx + ' 1 %.2f %.2f %.2f %.2f\n'\
+                        # %(offset_x1, offset_y1, offset_x2, offset_y2))
+                        # cv2.imwrite(save_file, resized_im)
+                        # p_idx += 1
+                        resized_im = cv2.resize(cropped_im, (image_size, image_size),interpolation=random.randint(0,4))
+                        resized_im = img_agu(resized_im)
+
+                        if random.random()>0.5:#水平翻转  千万不能做 水平翻转对应的 offset 一定要变
+                            img_ = cv2.flip(resized_im,1)
+                            offset_x1,offset_x2 = -offset_x2,-offset_x1
 
 
+                        img_ = resized_im.transpose(2, 0, 1)
+                        #--------------
+                        imgs_list.append(img_)
+                        offsets_list.append((offset_x1, offset_y1, offset_x2, offset_y2))
+                        labels_list.append(1.)
 
-        # for jj in range(index,min(self.pics_num,index+self.batch_size)):
+                        pos_num_sum += 1
+
+                    elif np.max(Iou) >= 0.4 and (jj in batch_idx_list_part):
+                        # save_file = os.path.join(part_save_dir, "%s.jpg" % d_idx)
+                        # f3.write("Rnet_24/part/%s.jpg"%d_idx + ' -1 %.2f %.2f %.2f %.2f\n'\
+                        # %(offset_x1, offset_y1, offset_x2, offset_y2))
+                        # cv2.imwrite(save_file, resized_im)
+                        # d_idx += 1
+
+                        resized_im = cv2.resize(cropped_im, (image_size, image_size),interpolation=random.randint(0,4))
+                        resized_im = img_agu(resized_im)
+
+                        if random.random()>0.5:#水平翻转  千万不能做 水平翻转对应的 offset 一定要变
+                            img_ = cv2.flip(resized_im,1)
+                            offset_x1,offset_x2 = -offset_x2,-offset_x1
+                            img_ = img_.transpose(2, 0, 1)
+                        else:
+                            img_ = resized_im.transpose(2, 0, 1)
+                        #--------------
+                        imgs_list.append(img_)
+                        offsets_list.append((offset_x1, offset_y1, offset_x2, offset_y2))
+                        labels_list.append(-1.)
+
+                        part_num_sum += 1
+        # print('pos_num_sum,part_num_sum,neg_num_sum : ',pos_num_sum,part_num_sum,neg_num_sum)
+
+        return imgs_list,offsets_list,labels_list,pos_num_sum,part_num_sum,neg_num_sum
+
+    def gen_p_data(self,batch_idx_list):
+
+        imgs_list = []
+        offsets_list = []
+        labels_list  = []
+
+        random.shuffle(batch_idx_list)
+        batch_idx_list_pos = batch_idx_list[0:max(1,int(len(batch_idx_list)*2/9))]
+
+        random.shuffle(batch_idx_list)
+        batch_idx_list_part = batch_idx_list[0:max(1,int(len(batch_idx_list)*3/9))]
+
+        random.shuffle(batch_idx_list)
+        batch_idx_list_neg = batch_idx_list[0:max(1,int(len(batch_idx_list)*4/9))]
+
+        pos_num_sum = 0
+        part_num_sum = 0
+        neg_num_sum = 0
+
+        pos_num_sum_thr = 100 + random.randint(-20,20)
+        part_num_sum_thr = 200 + random.randint(-30,30)
+        neg_num_sum_thr = 300 + random.randint(-50,50)
         #---------------------------------------------
         random.shuffle(batch_idx_list)
         for kk in range(len(batch_idx_list)):
@@ -161,9 +357,6 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             #image path
             im_path = annotation[0]
 
-            bbox = list(map(float, annotation[1:]))
-            #gt
-            boxes = np.array(bbox, dtype=np.float32).reshape(-1, 4)
             if self.flag_debug:
                 print('   {} {} '.format(jj,im_path))
             #boxed change to float type
@@ -398,23 +591,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             pos_num_sum += pos_num
             part_num_sum += part_num
             neg_num_sum += neg_num
-
-        if self.flag_debug : print('imgs_list len {} , offsets_list len {} , labels_list len {} '.format(len(imgs_list),len(offsets_list),len(labels_list)))
-        imgs_list = np.array(imgs_list)
-        imgs = imgs_list.astype(np.float32)
-
-        offsets_list = np.array(offsets_list)
-        gt_offsets = offsets_list.astype(np.float32)
-
-        labels_list = np.array(labels_list)
-        gt_labels = labels_list.astype(np.float32)
-
-        if self.flag_debug : print('imgs_list shape {} , gt_offsets shape {} , gt_labels shape {} '.format(imgs.shape,gt_offsets.shape,gt_labels.shape))
-
-        return imgs,gt_labels,gt_offsets,pos_num_sum,part_num_sum,neg_num_sum
-
-
-
+        return imgs_list,offsets_list,labels_list,pos_num_sum,part_num_sum,neg_num_sum
 
 def data_iter_fun(path_img,path_anno,flag_debug = False):
     with open(path_anno, 'r') as f:
