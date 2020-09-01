@@ -208,6 +208,9 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 boxes_align,_ = mm_det.detect_face(img)
             if boxes_align is None:
                 continue
+
+            if boxes_align.shape[0]==0:
+                continue
             dets = convert_to_square(boxes_align)
             dets[:, 0:4] = np.round(dets[:, 0:4])
 
