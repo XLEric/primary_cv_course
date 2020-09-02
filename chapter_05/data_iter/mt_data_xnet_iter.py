@@ -260,7 +260,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
                 # save negative images and write label
                 # Iou with all gts must below 0.3
-                if np.max(Iou) < 0.3 and ((neg_num_sum < pos_num_sum*4) or (neg_num_sum<neg_num_sum_thr))and (jj in batch_idx_list_neg):
+                if np.max(Iou) < 0.3 and ((neg_num_sum < (pos_num_sum*3.5)) or (neg_num_sum<neg_num_sum_thr))and (jj in batch_idx_list_neg):
                     # save the examples
                     # save_file = os.path.join(neg_save_dir, "%s.jpg" % n_idx)
                     # # print(save_file)
