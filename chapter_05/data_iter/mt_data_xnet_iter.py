@@ -33,7 +33,7 @@ def compute_accuracy(prob_cls, gt_cls):
     valid_gt_cls = torch.masked_select(gt_cls,mask)
     valid_prob_cls = torch.masked_select(prob_cls,mask)
     size = min(valid_gt_cls.size()[0], valid_prob_cls.size()[0])
-    prob_ones = torch.ge(valid_prob_cls,0.6).float()
+    prob_ones = torch.ge(valid_prob_cls,0.5).float()
     right_ones = torch.eq(prob_ones,valid_gt_cls).float()
 
     ## if size == 0 meaning that your gt_labels are all negative, landmark or part
@@ -90,7 +90,7 @@ def img_agu(img):
 
 class LoadImagesAndLabels(Dataset):  # for training/testing
     def __init__(self, pattern,path_img,path_anno,batch_size,flag_debug = False):
-        
+
         if pattern == 'P-Net':
             img_size=12
             img_min_size = 24
@@ -227,6 +227,22 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 cv2.namedWindow('im',0)
                 cv2.imshow('im',img)
                 cv2.waitKey(1)
+            #---------------------------------------------在检测基础上随机轻微扰动
+            dets_r = []
+            for ii in range(len(dets)):
+                x_left, y_top, x_right, y_bottom, _ = dets[ii]
+                width = x_right - x_left + 1
+                height = y_bottom - y_top + 1
+                edge = min(width,height)
+                r_offset = min(random.random()*6.,edge*0.2)
+                # print('r_offset',r_offset)
+                dets_r.append([dets[ii][0]+random.uniform(-r_offset,r_offset),
+                    dets[ii][1]+random.uniform(-r_offset,r_offset),
+                    dets[ii][2]+random.uniform(-r_offset,r_offset),
+                    dets[ii][3]+random.uniform(-r_offset,r_offset),
+                    dets[ii][4]
+                    ])
+            dets = np.array(dets_r)
             #-------------------------------------------------------------------
 
             for box in dets:
