@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #coding:utf-8
 #-*-coding:utf-8-*-
 # date:2019-07-20
