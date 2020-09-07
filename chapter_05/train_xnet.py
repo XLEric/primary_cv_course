@@ -91,13 +91,8 @@ def trainer(ops):
                 best_loss = loss_mean/loss_idx
                 loss_cnt = 0
             else:
-<<<<<<< HEAD
                 if loss_cnt > 3:
                     init_lr = init_lr*0.5
-=======
-                if loss_cnt>3:
-                    init_lr = init_lr*0.1
->>>>>>> 3de1eb8ef1c3720a6364aee7b62766a6e35556c0
                     set_learning_rate(optimizer, init_lr)
                     loss_cnt = 0
                 else:
@@ -177,21 +172,16 @@ if __name__ == "__main__":
         help = 'num_workers')
     parser.add_argument('--epochs', type=int, default = 1000,
         help = 'epochs')
-<<<<<<< HEAD
+
     parser.add_argument('--ft_model', type=str, default = './ckpt/R-Net_latest.pth',#./ckpt/R-Net_latest.pth
-=======
-    parser.add_argument('--ft_model', type=str, default = './ckpt/P-Net_latest.pth',#./ckpt/R-Net_latest.pth
->>>>>>> 3de1eb8ef1c3720a6364aee7b62766a6e35556c0
+
         help = 'ft_model')
     parser.add_argument('--ckpt', type=str, default = './ckpt/',
         help = 'ckpt')
     parser.add_argument('--Optimizer_X', type=str, default = 'Adam',
         help = 'Optimizer_X：Adam,SGD,RMSprop')
-<<<<<<< HEAD
+
     parser.add_argument('--pattern', type=str, default = 'R-Net',
-=======
-    parser.add_argument('--pattern', type=str, default = 'P-Net',
->>>>>>> 3de1eb8ef1c3720a6364aee7b62766a6e35556c0
         help = 'pattern：P-Net,R-Net,O-Net')
 
     #--------------------------------------------------------------------------
