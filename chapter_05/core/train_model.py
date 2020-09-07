@@ -19,8 +19,8 @@ def init_model():
 
     m_PNet,m_RNet,m_ONet = create_XNet(device,p_model_path,r_model_path,o_model_path)
 
-    pmm_det  = MtcnnDetector(pnet=m_PNet,rnet=None,onet=None,min_face_size=50,threshold=[0.4, 0.6, 0.6])
-    rmm_det  = MtcnnDetector(pnet=m_PNet,rnet=m_RNet,onet=None,min_face_size=50,threshold=[0.4, 0.6, 0.6])
+    pmm_det  = MtcnnDetector(pnet=m_PNet,rnet=None,onet=None,min_face_size=50,threshold=[0.5, 0.5, 0.6])
+    rmm_det  = MtcnnDetector(pnet=m_PNet,rnet=m_RNet,onet=None,min_face_size=50,threshold=[0.5, 0.55, 0.6])
 
     # print('pmm_det',pmm_det)
     return pmm_det,rmm_det

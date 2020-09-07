@@ -2,6 +2,10 @@
 # date:2019-05-20
 # Author: X.L.Eric
 # function: train P-Net/R-Net/O-Net
+
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 from data_iter.mt_data_xnet_iter import *
 from data_iter.utils_mt import *
 import os
@@ -74,6 +78,8 @@ def trainer(ops):
     loss_cls_mean = 0.
     loss_idx = 0.
     init_lr = ops.init_lr
+    
+    loss_cnt = 0
 
 
 
@@ -82,9 +88,14 @@ def trainer(ops):
         if loss_idx!=0:
             if best_loss > (loss_mean/loss_idx):
                 best_loss = loss_mean/loss_idx
+                loss_cnt = 0
             else:
-                init_lr = init_lr*0.1
-                set_learning_rate(optimizer, init_lr)
+                if loss_cnt > 3:
+                    init_lr = init_lr*0.5
+                    set_learning_rate(optimizer, init_lr)
+                    loss_cnt = 0
+                else:
+                    loss_cnt += 1
 
         loss_mean = 0.
         loss_cls_mean = 0.
@@ -145,7 +156,7 @@ if __name__ == "__main__":
     multiprocessing.set_start_method('spawn')
 
     parser = argparse.ArgumentParser(description=' Project X-Net Train')
-    parser.add_argument('--seed', type=int, default = 66,
+    parser.add_argument('--seed', type=int, default = 80,
         help = 'seed') # 设置随机种子
     parser.add_argument('--path_anno', type=str, default = "./datasets/wider_face_train.txt",
         help = 'path_anno')
@@ -155,17 +166,17 @@ if __name__ == "__main__":
         help = 'batch_size')
     parser.add_argument('--init_lr', type=float, default = 1e-3,
         help = 'init_lr')
-    parser.add_argument('--num_workers', type=int, default = 4,
+    parser.add_argument('--num_workers', type=int, default = 10,
         help = 'num_workers')
     parser.add_argument('--epochs', type=int, default = 1000,
         help = 'epochs')
-    parser.add_argument('--ft_model', type=str, default = './ckpt/O-Net_latest.pth',#./ckpt/R-Net_latest.pth
+    parser.add_argument('--ft_model', type=str, default = './ckpt/R-Net_latest.pth',#./ckpt/R-Net_latest.pth
         help = 'ft_model')
     parser.add_argument('--ckpt', type=str, default = './ckpt/',
         help = 'ckpt')
     parser.add_argument('--Optimizer_X', type=str, default = 'Adam',
         help = 'Optimizer_X：Adam,SGD,RMSprop')
-    parser.add_argument('--pattern', type=str, default = 'O-Net',
+    parser.add_argument('--pattern', type=str, default = 'R-Net',
         help = 'pattern：P-Net,R-Net,O-Net')
 
     #--------------------------------------------------------------------------
