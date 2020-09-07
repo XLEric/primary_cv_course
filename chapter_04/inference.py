@@ -25,9 +25,9 @@ from utils.common_utils import *
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description=' Project Classification Test')
+    parser = argparse.ArgumentParser(description=' Project Landmarks Test')
 
-    parser.add_argument('--test_model', type=str, default = './model_exp/2020-07-29_00-13-19/model_epoch-19.pth',
+    parser.add_argument('--test_model', type=str, default = './model_exp/2020-09-07_14-09-44/model_epoch-5.pth',
         help = 'test_model') # 模型路径
     parser.add_argument('--model', type=str, default = 'MY_Net',
         help = 'model : resnet_50,MY_Net') # 模型类型
