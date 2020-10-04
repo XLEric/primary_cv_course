@@ -83,6 +83,11 @@ def img_agu(img):
         img_hsv[:,:,0] =np.maximum(img_hsv[:,:,0],0)
         img_hsv[:,:,0] =np.minimum(img_hsv[:,:,0],180)#范围 0 ~180
         img=cv2.cvtColor(img_hsv,cv2.COLOR_HSV2BGR)
+    if random.random()>0.8:
+        img_gray = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
+        img[:,:,0] = img_gray
+        img[:,:,1] = img_gray
+        img[:,:,2] = img_gray
         # print('------------->>> hsv')
     return img
 
