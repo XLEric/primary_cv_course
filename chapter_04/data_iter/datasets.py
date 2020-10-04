@@ -74,7 +74,6 @@ class LoadImagesAndLabels(Dataset):
         img_path = self.files[index]
         pts = self.landmarks[index]
         img = cv2.imread(img_path)  # BGR
-        cv_resize_model = [cv2.INTER_LINEAR,cv2.INTER_CUBIC,cv2.INTER_NEAREST,cv2.INTER_AREA]
         if self.flag_agu == True:
             left_eye = np.average(pts[60:68], axis=0)
             right_eye = np.average(pts[68:76], axis=0)
@@ -91,16 +90,16 @@ class LoadImagesAndLabels(Dataset):
         if self.flag_agu == True:
             if random.random() > 0.9:
                 # print('agu hue ')
-                img_hsv=cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+                img_hsv=cv2.cvtColor(img_,cv2.COLOR_BGR2HSV)
                 hue_x = random.randint(-10,10)
                 # print(cc)
                 img_hsv[:,:,0]=(img_hsv[:,:,0]+hue_x)
                 img_hsv[:,:,0] =np.maximum(img_hsv[:,:,0],0)
                 img_hsv[:,:,0] =np.minimum(img_hsv[:,:,0],180)#范围 0 ~180
-                img=cv2.cvtColor(img_hsv,cv2.COLOR_HSV2BGR)
+                img_=cv2.cvtColor(img_hsv,cv2.COLOR_HSV2BGR)
         if self.flag_agu == True:
             if random.random() > 0.95:
-                img = img_agu_channel_same(img)
+                img_ = img_agu_channel_same(img_)
         if self.vis == True:
             cv2.namedWindow('crop',0)
             cv2.imshow('crop',img_)
