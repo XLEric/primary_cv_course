@@ -35,7 +35,7 @@ def trainer(ops,f_log):
         print('use model : %s'%(ops.model))
 
         if ops.model == 'resnet_50':
-            model_ = resnet50(num_classes = ops.num_classes)
+            model_ = resnet50(num_classes = ops.num_classes,dropout_factor=ops.dropout)
         else:
             model_ = MY_Net(num_classes = ops.num_classes)
 
@@ -140,15 +140,15 @@ def trainer(ops,f_log):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=' Project Classification Train')
-    parser.add_argument('--seed', type=int, default = 123,
+    parser.add_argument('--seed', type=int, default = 223,
         help = 'seed') # 设置随机种子
     parser.add_argument('--model_exp', type=str, default = './model_exp',
         help = 'model_exp') # 模型输出文件夹
-    parser.add_argument('--model', type=str, default = 'MY_Net',
+    parser.add_argument('--model', type=str, default = 'resnet_50',
         help = 'model : resnet_50,MY_Net') # 模型类型
     parser.add_argument('--num_classes', type=int , default = 196,
         help = 'num_classes') #  landmarks 个数*2
-    parser.add_argument('--GPUS', type=str, default = '0',
+    parser.add_argument('--GPUS', type=str, default = '1',
         help = 'GPUS') # GPU选择
 
     parser.add_argument('--images_path', type=str, default = './datasets/WFLW_images/',
@@ -160,11 +160,11 @@ if __name__ == "__main__":
 
     parser.add_argument('--pretrained', type=bool, default = True,
         help = 'imageNet_Pretrain') # 初始化学习率
-    parser.add_argument('--fintune_model', type=str, default = './model_exp/2020-07-28_23-16-41/model_epoch-59.pth',
+    parser.add_argument('--fintune_model', type=str, default = './model_epoch-160.pth',
         help = 'fintune_model') # fintune model
     parser.add_argument('--loss_define', type=str, default = 'wing_loss',
         help = 'define_loss') # 损失函数定义
-    parser.add_argument('--init_lr', type=float, default = 1e-4,
+    parser.add_argument('--init_lr', type=float, default = 1e-3,
         help = 'init_learningRate') # 初始化学习率
     parser.add_argument('--lr_decay', type=float, default = 0.1,
         help = 'learningRate_decay') # 学习率权重衰减率
@@ -174,6 +174,8 @@ if __name__ == "__main__":
         help = 'momentum') # 优化器动量
     parser.add_argument('--batch_size', type=int, default = 32,
         help = 'batch_size') # 训练每批次图像数量
+    parser.add_argument('--dropout', type=float, default = 0.5,
+        help = 'dropout') # dropout
     parser.add_argument('--epochs', type=int, default = 2000,
         help = 'epochs') # 训练周期
     parser.add_argument('--num_workers', type=int, default = 8,
