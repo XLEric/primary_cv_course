@@ -13,7 +13,9 @@
 
 ## 具体内容  
 
-
+## 使用方式  
+* 训练（train）: python train_xnet.py
+* 推断（inference）: python video.py
 
 ## 联系方式 （Contact）  
 * E-mails: 305141918@qq.com   
