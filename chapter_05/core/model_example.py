@@ -8,10 +8,10 @@ if __name__ == "__main__":
     print('\n ----------------------------------------------------------')
     image_hight = 480
     image_width = 640
-    stride = 2
-    # grid_num = ((image_hight-12)*(image_width-12))/stride + 1
-    grid_hight = int(np.floor((image_hight-12)/2)+1)
-    grid_width = int(np.floor((image_width-12)/2)+1)
+    stride = 2 # MaxPool2d stride
+
+    grid_hight = int(np.floor((image_hight-12)/stride)+1)
+    grid_width = int(np.floor((image_width-12)/stride)+1)
     grid_num = grid_hight * grid_width
 
     grid_num = int(grid_num)
