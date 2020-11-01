@@ -36,13 +36,8 @@ class LossFn:
         mask_pos = torch.eq(gt_label,1.)# 正样本  gt_label == 1
         mask_neg = torch.eq(gt_label,0.)# 负样本  gt_label == 0
 
-        # mask_pos = gt_label.eq(1.).float()# 正样本  gt_label == 1
-        # mask_neg = gt_label.eq(0.).float()# 负样本  gt_label == 0
-
-        # pos_label = torch.masked_select(gt_label,mask_pos)
         pos_pre = torch.masked_select(pred_label,mask_pos)
 
-        # neg_label = torch.masked_select(gt_label,mask_neg)
         neg_pre = torch.masked_select(pred_label,mask_neg)
 
         pos_loss = -torch.log(pos_pre+w) * torch.pow(1. - pos_pre, 2.) # pos
@@ -83,12 +78,11 @@ class LossFn:
         #only valid element can effect the loss
         valid_gt_offset = gt_offset[chose_index,:]
         valid_pred_offset = pred_offset[chose_index,:]
-        # return self.loss_box(valid_pred_offset,valid_gt_offset)*self.box_factor
 
         loss = torch.abs(valid_pred_offset-valid_gt_offset)
-        # print('1 bbox loss size : ',loss.size())
+    
         loss = torch.sum(loss,dim = 1)
-        # print('2 bbox loss size : ',loss.size())
+      
         loss = torch.mean(loss)*self.box_factor
         return loss
 
@@ -116,26 +110,6 @@ class PNet(nn.Module):
     def __init__(self):
         super(PNet, self).__init__()
 
-
-        # backend
-        # self.pre_layer0 = nn.Sequential(
-        #     nn.Conv2d(3, 6, kernel_size=3, stride=1),  # conv1
-        #     nn.BatchNorm2d(6,affine=True),
-        #     nn.PReLU(),  # PReLU1
-        #     nn.MaxPool2d(kernel_size=2, stride=2),  # pool1
-        #
-        #
-        # )
-        # self.cov = nn.Conv2d(3, 6, kernel_size=3, stride=2)
-        # self.pre_layer1 = nn.Sequential(
-        #     nn.Conv2d(6, 12, kernel_size=3, stride=1),  # conv2
-        #     nn.BatchNorm2d(12,affine=True),
-        #     nn.PReLU(),  # PReLU2
-        #     nn.Conv2d(12, 24, kernel_size=3, stride=1),  # conv3
-        #     nn.BatchNorm2d(24,affine=True),
-        #     nn.PReLU()  # PReLU3
-        # )
-
         self.pre_layer = nn.Sequential(
             nn.Conv2d(3, 12, kernel_size=3, stride=1),  # conv1
             nn.BatchNorm2d(12,affine=True),
@@ -158,11 +132,7 @@ class PNet(nn.Module):
 
     def forward(self, x):
         x = (x - 127.5) / 128.
-        # rot1 = self.cov(x)
         x = self.pre_layer(x)
-
-        # x = x +rot1
-        # x = self.pre_layer1(x)
         label = torch.sigmoid(self.conv4_1(x))
         offset = self.conv4_2(x)
         return label, offset
@@ -261,68 +231,3 @@ class ONet(nn.Module):
         offset = self.conv6_2(x)
 
         return label,offset
-#
-# # Residual Block
-# class ResidualBlock(nn.Module):
-#     def __init__(self, in_channels, out_channels, stride=1, downsample=None):
-#         super(ResidualBlock, self).__init__()
-#         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride)
-#         self.bn1 = nn.BatchNorm2d(out_channels)
-#         self.relu = nn.ReLU(inplace=True)
-#         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=stride)
-#         self.bn2 = nn.BatchNorm2d(out_channels)
-#         self.downsample = downsample
-#
-#     def forward(self, x):
-#         residual = x
-#         out = self.conv1(x)
-#         out = self.bn1(out)
-#         out = self.relu(out)
-#         out = self.conv2(out)
-#         out = self.bn2(out)
-#         if self.downsample:
-#             residual = self.downsample(x)
-#         out += residual
-#         out = self.relu(out)
-#         return out
-#
-#
-#
-# # ResNet Module
-# class ResNet(nn.Module):
-#     def __init__(self, block, num_classes=10):
-#         super(ResNet, self).__init__()
-#         self.in_channels = 16
-#         self.conv = nn.Conv2d(3, 16,kernel_size=3)
-#         self.bn = nn.BatchNorm2d(16)
-#         self.relu = nn.ReLU(inplace=True)
-#         self.layer1 = self.make_layer(block, 16, 3)
-#         self.layer2 = self.make_layer(block, 32, 3, 2)
-#         self.layer3 = self.make_layer(block, 64, 3, 2)
-#         self.avg_pool = nn.AvgPool2d(8)
-#         self.fc = nn.Linear(64, num_classes)
-#
-#     def make_layer(self, block, out_channels, blocks, stride=1):
-#         downsample = None
-#         if (stride != 1) or (self.in_channels != out_channels):
-#             downsample = nn.Sequential(
-#                 nn.Conv2d(self.in_channels, out_channels, kernel_size=3, stride=stride),
-#                 nn.BatchNorm2d(out_channels))
-#         layers = []
-#         layers.append(block(self.in_channels, out_channels, stride, downsample))
-#         self.in_channels = out_channels
-#         for i in range(1, blocks):
-#             layers.append(block(out_channels, out_channels))
-#         return nn.Sequential(*layers)
-#
-#     def forward(self, x):
-#         out = self.conv(x)
-#         out = self.bn(out)
-#         out = self.relu(out)
-#         out = self.layer1(out)
-#         out = self.layer2(out)
-#         out = self.layer3(out)
-#         out = self.avg_pool(out)
-#         out = out.view(out.size(0), -1)
-#         out = self.fc(out)
-#         return out
