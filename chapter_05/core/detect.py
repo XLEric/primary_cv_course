@@ -7,44 +7,6 @@ from core.models import PNet,RNet,ONet
 import core.utils as utils
 import core.image_tools as image_tools
 import os
-# from data_iterator import *
-
-# def create_mtcnn_net(p_model_path=None, r_model_path=None, o_model_path=None, use_cuda=True):
-#
-#     pnet, rnet, onet = None, None, None
-#
-#     if p_model_path is not None:
-#         pnet = PNet(use_cuda=use_cuda)
-#         if(use_cuda):
-#             print('p_model_path:{0}'.format(p_model_path))
-#             pnet.load_state_dict(torch.load(p_model_path))
-#             pnet.cuda()
-#         else:
-#             # forcing all GPU tensors to be in CPU while loading
-#             pnet.load_state_dict(torch.load(p_model_path, map_location=lambda storage, loc: storage))
-#         pnet.eval()
-#
-#     if r_model_path is not None:
-#         rnet = RNet(use_cuda=use_cuda)
-#         if (use_cuda):
-#             print('r_model_path:{0}'.format(r_model_path))
-#             rnet.load_state_dict(torch.load(r_model_path))
-#             rnet.cuda()
-#         else:
-#             rnet.load_state_dict(torch.load(r_model_path, map_location=lambda storage, loc: storage))
-#         rnet.eval()
-#
-#     if o_model_path is not None:
-#         onet = ONet(use_cuda=use_cuda)
-#         if (use_cuda):
-#             print('o_model_path:{0}'.format(o_model_path))
-#             onet.load_state_dict(torch.load(o_model_path))
-#             onet.cuda()
-#         else:
-#             onet.load_state_dict(torch.load(o_model_path, map_location=lambda storage, loc: storage))
-#         onet.eval()
-#
-#     return pnet,rnet,onet
 
 def create_XNet(device,p_model_path,r_model_path,o_model_path):
 
@@ -148,36 +110,22 @@ class MtcnnDetector(object):
         -------
             bbox array
         """
-
-        # print('map & reg shape : ',map.shape ,reg.shape)
         stride = 2
         cellsize = 12 # receptive field
 
         t_index = np.where(map > threshold)
-        # print('shape of t_index:{0}'.format(len(t_index)))
-        # print('t_index{0}'.format(t_index))
-        # time.sleep(5)
 
         # find nothing
         if t_index[0].size == 0:
             return np.array([])
 
-        # reg = (1, n, m, 4)
+       
         # choose bounding box whose socre are larger than threshold
         dx1, dy1, dx2, dy2 = [reg[0, t_index[0], t_index[1], i] for i in range(4)] # 计算偏差
         # print(dx1.shape)
         # time.sleep(5)
         reg = np.array([dx1, dy1, dx2, dy2])
-        # print('shape of reg{0}'.format(reg.shape))
-
-        # lefteye_dx, lefteye_dy, righteye_dx, righteye_dy, nose_dx, nose_dy, \
-        # leftmouth_dx, leftmouth_dy, rightmouth_dx, rightmouth_dy = [landmarks[0, t_index[0], t_index[1], i] for i in range(10)]
-        #
-        # landmarks = np.array([lefteye_dx, lefteye_dy, righteye_dx, righteye_dy, nose_dx, nose_dy, leftmouth_dx, leftmouth_dy, rightmouth_dx, rightmouth_dy])
-
-        # abtain score of classification which larger than threshold
-        # t_index[0]: choose the first column of t_index
-        # t_index[1]: choose the second column of t_index
+  
         score = map[t_index[0], t_index[1], 0]
 
         # hence t_index[1] means column, t_index[1] is the value of x
@@ -248,8 +196,7 @@ class MtcnnDetector(object):
         dx = np.zeros((numbox, ))
         dy = np.zeros((numbox, ))
         edx, edy  = tmpw.copy()-1, tmph.copy()-1
-        # x, y: start point of the bbox in original image
-        # ex, ey: end point of the bbox in original image
+        
         x, y, ex, ey = bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 3]
 
         tmp_index = np.where(ex > w-1)
@@ -299,7 +246,6 @@ class MtcnnDetector(object):
         net_size = 12
 
         current_scale = float(net_size) / self.min_face_size    # find initial scale
-        # print('imgshape:{0}, current_scale:{1}'.format(im.shape, current_scale))
         im_resized = self.resize_image(im, current_scale) # scale = 1.0
         current_height, current_width, _ = im_resized.shape
 
@@ -308,17 +254,8 @@ class MtcnnDetector(object):
         i = 0
         # print('-------------------------- >>> ')
         while min(current_height, current_width) >= net_size:
-            # print(current_height, current_width)
+            
             feed_imgs = []
-
-            # print('im_resized shape : ',im_resized.shape)
-            # img = prewhiten(im_resized)
-
-
-
-            # im_resized = (im_resized - 127.5) / 128.
-            # feed_imgs = torch.from_numpy(img)
-
             #
             img = torch.from_numpy(im_resized)
             img = img.unsqueeze_(0)
@@ -326,8 +263,6 @@ class MtcnnDetector(object):
 
             if torch.cuda.is_available():
                 feed_imgs = feed_imgs.cuda()
-
-            # self.pnet_detector is a trained pnet torch model
 
             # receptive field is 12×12
             # 12×12 --> score
@@ -338,22 +273,6 @@ class MtcnnDetector(object):
             cls_map_np = image_tools.convert_chwTensor_to_hwcNumpy(cls_map.cpu())
             reg_np = image_tools.convert_chwTensor_to_hwcNumpy(reg.cpu())
 
-            # cls_map_np = cls_map[0].cpu().numpy()
-            # reg_np = reg[0].cpu().numpy()
-            #
-            # cls_map_np = cls_map_np
-            # cls_map_np = np.transpose(cls_map_np, (0,2,3,1))
-            # reg_np = np.transpose(reg_np, (0,2,3,1))
-            # print(cls_map_np.shape, reg_np.shape) # cls_map_np = (1, n, m, 1) reg_np.shape = (1, n, m 4)
-            # time.sleep(5)
-            # landmark_np = image_tools.convert_chwTensor_to_hwcNumpy(landmark.cpu())
-
-            # self.threshold[0] = 0.6
-            # print(cls_map_np[0,:,:].shape)
-            # time.sleep(4)
-
-            # boxes = [x1, y1, x2, y2, score, reg]
-            # print('while reg_np size :',cls_map_np.shape,reg_np.shape)
             boxes = self.generate_bounding_box(cls_map_np[ 0, :, :], reg_np, current_scale, self.thresh[0])
 
             # cv2.imshow('pnet_image',im_resized)
@@ -392,24 +311,11 @@ class MtcnnDetector(object):
         bw = all_boxes[:, 2] - all_boxes[:, 0] + 1
         bh = all_boxes[:, 3] - all_boxes[:, 1] + 1
 
-        # landmark_keep = all_boxes[:, 9:].reshape((5,2))
-
-
         boxes = np.vstack([all_boxes[:,0],
                    all_boxes[:,1],
                    all_boxes[:,2],
                    all_boxes[:,3],
                    all_boxes[:,4],
-                   # all_boxes[:, 0] + all_boxes[:, 9] * bw,
-                   # all_boxes[:, 1] + all_boxes[:,10] * bh,
-                   # all_boxes[:, 0] + all_boxes[:, 11] * bw,
-                   # all_boxes[:, 1] + all_boxes[:, 12] * bh,
-                   # all_boxes[:, 0] + all_boxes[:, 13] * bw,
-                   # all_boxes[:, 1] + all_boxes[:, 14] * bh,
-                   # all_boxes[:, 0] + all_boxes[:, 15] * bw,
-                   # all_boxes[:, 1] + all_boxes[:, 16] * bh,
-                   # all_boxes[:, 0] + all_boxes[:, 17] * bw,
-                   # all_boxes[:, 1] + all_boxes[:, 18] * bh
                   ])
 
         boxes = boxes.T
@@ -426,18 +332,7 @@ class MtcnnDetector(object):
                               align_bottomx,
                               align_bottomy,
                               all_boxes[:, 4],
-                              # align_topx + all_boxes[:,9] * bw,
-                              # align_topy + all_boxes[:,10] * bh,
-                              # align_topx + all_boxes[:,11] * bw,
-                              # align_topy + all_boxes[:,12] * bh,
-                              # align_topx + all_boxes[:,13] * bw,
-                              # align_topy + all_boxes[:,14] * bh,
-                              # align_topx + all_boxes[:,15] * bw,
-                              # align_topy + all_boxes[:,16] * bh,
-                              # align_topx + all_boxes[:,17] * bw,
-                              # align_topy + all_boxes[:,18] * bh,
                               ])
-        # print('detct **** boxes_align ',boxes_align.shape)
         boxes_align = boxes_align.T
 
         return boxes, boxes_align
@@ -465,10 +360,6 @@ class MtcnnDetector(object):
         if dets is None:
             return None,None
 
-        # (705, 5) = [x1, y1, x2, y2, score, reg]
-        # print("pnet detection {0}".format(dets.shape))
-        # time.sleep(5)
-
         # return square boxes
         dets = self.square_bbox(dets)
         # rounds
@@ -485,21 +376,6 @@ class MtcnnDetector(object):
             print "You may need to reset RNet batch size if this info appears frequently, \
         face candidates:%d, current batch_size:%d"%(num_boxes, batch_size)
         '''
-
-        # cropped_ims_tensors = np.zeros((num_boxes, 3, 24, 24), dtype=np.float32)
-        #------------------------------------------------------------------------------- fun 1
-        # cropped_ims_tensors = []
-        # for i in range(num_boxes):
-        #     tmp = np.zeros((tmph[i], tmpw[i], 3), dtype=np.uint8)
-        #     tmp[dy[i]:edy[i]+1, dx[i]:edx[i]+1, :] = im[y[i]:ey[i]+1, x[i]:ex[i]+1, :]
-        #     crop_im = cv2.resize(tmp, (24, 24),interpolation=cv2.INTER_LINEAR)
-        #     # crop_im = (crop_im - 127.5) / 128.
-        #     # print('------------>>>>>. rrr')
-        #     crop_im_tensor = image_tools.convert_image_to_tensor(crop_im.astype(np.float32))
-        #     # cropped_ims_tensors[i, :, :, :] = crop_im_tensor
-        #     cropped_ims_tensors.append(crop_im_tensor)
-        # feed_imgs = Variable(torch.stack(cropped_ims_tensors))
-        #------------------------------------------------------------------------------- fun 2
         cropped_ims_tensors = []
         for i in range(num_boxes):
             tmp = np.zeros((tmph[i], tmpw[i], 3), dtype=np.uint8)
@@ -554,17 +430,7 @@ class MtcnnDetector(object):
                               keep_boxes[:,1],
                               keep_boxes[:,2],
                               keep_boxes[:,3],
-                              keep_cls[:,0],
-                              # keep_boxes[:,0] + keep_landmark[:, 0] * bw,
-                              # keep_boxes[:,1] + keep_landmark[:, 1] * bh,
-                              # keep_boxes[:,0] + keep_landmark[:, 2] * bw,
-                              # keep_boxes[:,1] + keep_landmark[:, 3] * bh,
-                              # keep_boxes[:,0] + keep_landmark[:, 4] * bw,
-                              # keep_boxes[:,1] + keep_landmark[:, 5] * bh,
-                              # keep_boxes[:,0] + keep_landmark[:, 6] * bw,
-                              # keep_boxes[:,1] + keep_landmark[:, 7] * bh,
-                              # keep_boxes[:,0] + keep_landmark[:, 8] * bw,
-                              # keep_boxes[:,1] + keep_landmark[:, 9] * bh,
+                              keep_cls[:,0]
                             ])
 
         align_topx = keep_boxes[:,0] + keep_reg[:,0] * bw
@@ -576,17 +442,7 @@ class MtcnnDetector(object):
                                align_topy,
                                align_bottomx,
                                align_bottomy,
-                               keep_cls[:, 0],
-                               # align_topx + keep_landmark[:, 0] * bw,
-                               # align_topy + keep_landmark[:, 1] * bh,
-                               # align_topx + keep_landmark[:, 2] * bw,
-                               # align_topy + keep_landmark[:, 3] * bh,
-                               # align_topx + keep_landmark[:, 4] * bw,
-                               # align_topy + keep_landmark[:, 5] * bh,
-                               # align_topx + keep_landmark[:, 6] * bw,
-                               # align_topy + keep_landmark[:, 7] * bh,
-                               # align_topx + keep_landmark[:, 8] * bw,
-                               # align_topy + keep_landmark[:, 9] * bh,
+                               keep_cls[:, 0]
                              ])
 
         boxes = boxes.T
@@ -622,29 +478,13 @@ class MtcnnDetector(object):
 
         [dy, edy, dx, edx, y, ey, x, ex, tmpw, tmph] = self.pad(dets, w, h)
         num_boxes = dets.shape[0]
-
-
-        # cropped_ims_tensors = np.zeros((num_boxes, 3, 24, 24), dtype=np.float32)
-        #------------------------------------------------------------------------------ fun1
-        # cropped_ims_tensors = []
-        # for i in range(num_boxes):
-        #     tmp = np.zeros((tmph[i], tmpw[i], 3), dtype=np.uint8)
-        #     # crop input image
-        #     tmp[dy[i]:edy[i] + 1, dx[i]:edx[i] + 1, :] = im[y[i]:ey[i] + 1, x[i]:ex[i] + 1, :]
-        #     crop_im = cv2.resize(tmp, (48, 48))
-        #     # crop_im = (crop_im - 127.5) / 128.
-        #     crop_im_tensor = image_tools.convert_image_to_tensor(crop_im)
-        #     # cropped_ims_tensors[i, :, :, :] = crop_im_tensor
-        #     cropped_ims_tensors.append(crop_im_tensor)
-        # feed_imgs = Variable(torch.stack(cropped_ims_tensors))
-        #------------------------------------------------------------------------------- fun 2
+        
         cropped_ims_tensors = []
         for i in range(num_boxes):
             tmp = np.zeros((tmph[i], tmpw[i], 3), dtype=np.uint8)
             tmp[dy[i]:edy[i]+1, dx[i]:edx[i]+1, :] = im[y[i]:ey[i]+1, x[i]:ex[i]+1, :]
             crop_im = cv2.resize(tmp, (48, 48),interpolation=cv2.INTER_LINEAR)
-            # crop_im = (crop_im - 127.5) / 128.
-            # print('------------>>>>>. rrr')
+            
             crop_im_tensor = torch.from_numpy(crop_im)
             # cropped_ims_tensors[i, :, :, :] = crop_im_tensor
             cropped_ims_tensors.append(crop_im_tensor)
@@ -702,35 +542,11 @@ class MtcnnDetector(object):
                                  align_bottomx,
                                  align_bottomy,
                                  keep_cls[:, 0],
-                                 # align_topx + keep_landmark[:, 0] * bw,
-                                 # align_topy + keep_landmark[:, 1] * bh,
-                                 # align_topx + keep_landmark[:, 2] * bw,
-                                 # align_topy + keep_landmark[:, 3] * bh,
-                                 # align_topx + keep_landmark[:, 4] * bw,
-                                 # align_topy + keep_landmark[:, 5] * bh,
-                                 # align_topx + keep_landmark[:, 6] * bw,
-                                 # align_topy + keep_landmark[:, 7] * bh,
-                                 # align_topx + keep_landmark[:, 8] * bw,
-                                 # align_topy + keep_landmark[:, 9] * bh,
                                  ])
 
         boxes_align = boxes_align.T
 
-        # landmark =  np.vstack([
-        #                          align_landmark_topx + keep_landmark[:, 0] * bw,
-        #                          align_landmark_topy + keep_landmark[:, 1] * bh,
-        #                          align_landmark_topx + keep_landmark[:, 2] * bw,
-        #                          align_landmark_topy + keep_landmark[:, 3] * bh,
-        #                          align_landmark_topx + keep_landmark[:, 4] * bw,
-        #                          align_landmark_topy + keep_landmark[:, 5] * bh,
-        #                          align_landmark_topx + keep_landmark[:, 6] * bw,
-        #                          align_landmark_topy + keep_landmark[:, 7] * bh,
-        #                          align_landmark_topx + keep_landmark[:, 8] * bw,
-        #                          align_landmark_topy + keep_landmark[:, 9] * bh,
-        #                          ])
-        #
-        # landmark_align = landmark.T
-
+       
         return None, boxes_align
 
 
